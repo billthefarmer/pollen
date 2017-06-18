@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+  <string name="app_name">Pollen UK</string>
+
+  <string name="forecast">Forecast</string>
+  <string name="map">Map</string>
+
+</resources>

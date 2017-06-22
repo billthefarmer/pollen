@@ -36,6 +36,7 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -69,14 +70,14 @@ public class Pollen extends Activity
     private final static String WEATHER = "weather";
     private final static String FORECAST = "forecast";
 
-    private final static String PREF_WIFI = "pref_wifi";
-    private final static String PREF_ROAMING = "pref_roaming";
+    public final static String PREF_WIFI = "pref_wifi";
+    public final static String PREF_ROAMING = "pref_roaming";
 
     public final static String TEMPLATE =
         "https://socialpollencount.co.uk/api/forecast?" +
         "location=[%f,%f]&platform=mobile";
     public final static String FORMAT =
-        "yyyy-MM-dd'T'HH:mm:ssXXX";
+        "yyyy-MM-dd'T'HH:mm:ss";
 
     public final static int DELAY = 5000;
     public final static int DISTANCE = 50000;
@@ -171,6 +172,7 @@ public class Pollen extends Activity
         switch (item.getItemId())
         {
         case R.id.action_map:
+            onMapClick();
             break;
 
         default:
@@ -180,6 +182,13 @@ public class Pollen extends Activity
         return true;
     }
 
+    // onMapClick
+    private void onMapClick()
+    {
+        Intent intent = new Intent(this, Map.class);
+        startActivity(intent);
+    }
+
     // loadData
     private void loadData(Location location)
     {
@@ -187,6 +196,7 @@ public class Pollen extends Activity
         double lng = location.getLongitude();
 
         String url = String.format(Locale.getDefault(), TEMPLATE, lat, lng);
+
         LoadTask loadTask = new LoadTask();
         loadTask.execute(url);
     }
@@ -282,8 +292,12 @@ public class Pollen extends Activity
                                               "%s - %s°C", weatherString,
                                               tempString);
 
-                pollenView.setText(string);
+                weatherView.setText(string);
+                weatherView.setVisibility(View.VISIBLE);
             }
+
+            else
+                weatherView.setVisibility(View.GONE);
 
             return convertView;
         }
@@ -348,7 +362,10 @@ public class Pollen extends Activity
                 PollenAdapter adapter = new PollenAdapter(forecastList);
 
                 if (list != null)
+                {
                     list.setAdapter(adapter);
+                    adapter.notifyDataSetChanged();
+                }
             }
 
             catch (Exception e) {}

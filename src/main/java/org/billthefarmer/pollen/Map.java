@@ -24,16 +24,24 @@
 package org.billthefarmer.pollen;
 
 import android.app.Activity;
+import android.app.ActionBar;
+import android.content.SharedPreferences;
+import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.view.MenuItem;
 import android.view.View;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.api.IGeoPoint;
@@ -43,7 +51,6 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Overlay;
 import org.osmdroid.views.overlay.CopyrightOverlay;
-import org.osmdroid.views.overlay.mylocation.SimpleLocationOverlay;
 import org.osmdroid.views.overlay.ScaleBarOverlay;
 
 public class Map extends Activity
@@ -54,12 +61,163 @@ public class Map extends Activity
         "https://socialpollencount.co.uk/api/points/%04d/%02d/%02d?" +
         "location=[%f,%f]&distance=%d&platform=mobile&hotspots=%d";
 
+    public final static int DELAY = 5000;
+    public final static int DISTANCE = 50000;
+
+    private boolean wifi = true;
+    private boolean roaming = false;
+
+    private MapView map;
+
+    private Location last = null;
+    private LocationManager locationManager;
+
     // onCreate
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
+        setContentView(R.layout.map);
+
+        // Enable back navigation on action bar
+        ActionBar actionBar = getActionBar();
+        if (actionBar != null)
+        {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
+
+	// Set the user agent
+	org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants
+	    .setUserAgentValue(BuildConfig.APPLICATION_ID);
+
+	// Get the map
+        map = (MapView)findViewById(R.id.map);
+	if (map != null)
+	{
+	    // Set up the map
+	    map.setTileSource(TileSourceFactory.MAPNIK);
+	    map.setBuiltInZoomControls(true);
+	    map.setMultiTouchControls(true);
+
+	    List<Overlay> overlayList = map.getOverlays();
+
+	    // Add the overlays
+	    CopyrightOverlay copyright =
+		new CopyrightOverlay(this);
+	    overlayList.add(copyright);
+	    copyright.setAlignBottom(true);
+	    copyright.setAlignRight(false);
+
+	    ScaleBarOverlay scale = new ScaleBarOverlay(map);
+	    scale.setAlignBottom(true);
+	    scale.setAlignRight(true);
+	    overlayList.add(scale);
+        }
+
+	// Acquire a reference to the system Location Manager
+        locationManager = (LocationManager)
+	    getSystemService(LOCATION_SERVICE);
+
+	Location location =
+	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+        if (location != null)
+            last = location;
+    }
+
+    // On resume
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+
+        // Get preferences
+        SharedPreferences preferences =
+            PreferenceManager.getDefaultSharedPreferences(this);
+
+        wifi = preferences.getBoolean(Pollen.PREF_WIFI, true);
+        roaming = preferences.getBoolean(Pollen.PREF_ROAMING, false);
+
+	Location location =
+	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+	if (location != null)
+	    loadData(location);
+
+        locationManager
+            .requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                                    DELAY, 0, new LocationListener()
+            {
+                // onLocationChanged
+                @Override
+                public void onLocationChanged(Location location)
+                {
+                    if (last != null && location.distanceTo(last) < DISTANCE)
+                        locationManager.removeUpdates(this);
+
+                    last = location;
+                    loadData(location);
+
+                    IMapController mapController = map.getController();
+
+                    // Zoom map
+                    mapController.setZoom(10);
+
+                    // Get point
+                    GeoPoint point = new GeoPoint(location);
+
+                    // Centre map
+                    mapController.setCenter(point);
+                }
+ 
+                @Override
+                public void onStatusChanged(String provider,
+                                            int status, Bundle extras) {}
+
+                @Override
+                public void onProviderEnabled(String provider) {}
+
+                @Override
+                public void onProviderDisabled(String provider) {}
+           });
+    }
+
+    // onOptionsItemSelected
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
+        // Get id
+        int id = item.getItemId();
+        switch (id)
+        {
+        // Home
+        case android.R.id.home:
+            finish();
+            break;
+
+        default:
+            return false;
+        }
+
+        return true;
+    }
+
+    // loadData
+    private void loadData(Location location)
+    {
+        Calendar today = Calendar.getInstance();
+        int year = today.get(Calendar.YEAR);
+        int month = today.get(Calendar.MONTH);
+        int day = today.get(Calendar.DATE);
+
+        double lat = location.getLatitude();
+        double lng = location.getLongitude();
+
+        String url = String.format(Locale.getDefault(), TEMPLATE,
+                                   year, month, day, lat, lng, 200, 0);
+
+        LoadTask loadTask = new LoadTask();
+        loadTask.execute(url);
     }
 
     private class LoadTask extends AsyncTask<String, Integer, String>

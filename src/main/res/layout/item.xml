@@ -5,8 +5,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-  <ListView
-      android:id="@+id/list"
+  <TextView
+      android:id="@+id/date"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent" />
+
+  <TextView
+      android:id="@+id/pollen"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent" />
+
+  <TextView
+      android:id="@+id/weather"
       android:layout_width="match_parent"
       android:layout_height="match_parent" />
 

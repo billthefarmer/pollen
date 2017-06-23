@@ -26,22 +26,31 @@ package org.billthefarmer.pollen;
 import android.app.Activity;
 import android.app.ActionBar;
 import android.content.SharedPreferences;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.api.IGeoPoint;
@@ -61,13 +70,31 @@ public class Map extends Activity
         "https://socialpollencount.co.uk/api/points/%04d/%02d/%02d?" +
         "location=[%f,%f]&distance=%d&platform=mobile&hotspots=%d";
 
+    private final static String POINTS   = "points";
+    private final static String LOCATION = "location";
+    private final static String METADATA = "metadata";
+    private final static String FORECAST = "forecast";
+
+    private final static String DESCRIPTIONS[] =
+    {
+        "Low", "Moderate", "High", "Very High"
+    };
+
+    private final static int IDS[] =
+    {
+        R.drawable.ic_low, R.drawable.ic_moderate,
+        R.drawable.ic_high, R.drawable.ic_very_high
+    }; 
+
     public final static int DELAY = 5000;
     public final static int DISTANCE = 50000;
 
     private boolean wifi = true;
     private boolean roaming = false;
 
+    private TextView status;
     private MapView map;
+    private IconListOverlay icons;
 
     private Location last = null;
     private LocationManager locationManager;
@@ -90,6 +117,9 @@ public class Map extends Activity
 	org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants
 	    .setUserAgentValue(BuildConfig.APPLICATION_ID);
 
+	// Get the text view
+        status = (TextView)findViewById(R.id.status);
+
 	// Get the map
         map = (MapView)findViewById(R.id.map);
 	if (map != null)
@@ -109,9 +139,12 @@ public class Map extends Activity
 	    copyright.setAlignRight(false);
 
 	    ScaleBarOverlay scale = new ScaleBarOverlay(map);
+	    overlayList.add(scale);
 	    scale.setAlignBottom(true);
 	    scale.setAlignRight(true);
-	    overlayList.add(scale);
+
+            icons = new IconListOverlay();
+            overlayList.add(icons);
         }
 
 	// Acquire a reference to the system Location Manager
@@ -141,8 +174,34 @@ public class Map extends Activity
 	Location location =
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
+        IMapController mapController = map.getController();
+
 	if (location != null)
-	    loadData(location);
+        {
+            last = location;
+            loadData(location);
+
+            // Zoom map
+            mapController.setZoom(9);
+
+            // Get point
+            IGeoPoint point = new GeoPoint(location);
+
+            // Centre map
+            mapController.setCenter(point);
+        }
+
+        else
+        {
+            // Zoom map
+            mapController.setZoom(9);
+
+            // Get point
+           IGeoPoint point = new GeoPoint(52.561928, -1.464854);
+
+           // Centre map
+           mapController.setCenter(point);
+        }
 
         locationManager
             .requestLocationUpdates(LocationManager.GPS_PROVIDER,
@@ -161,10 +220,10 @@ public class Map extends Activity
                     IMapController mapController = map.getController();
 
                     // Zoom map
-                    mapController.setZoom(10);
+                    mapController.setZoom(9);
 
                     // Get point
-                    GeoPoint point = new GeoPoint(location);
+                    IGeoPoint point = new GeoPoint(location);
 
                     // Centre map
                     mapController.setCenter(point);
@@ -205,6 +264,35 @@ public class Map extends Activity
     // loadData
     private void loadData(Location location)
     {
+        // Check connectivity before update
+        ConnectivityManager manager =
+            (ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo info = manager.getActiveNetworkInfo();
+
+        // Check connected
+        if (info == null || !info.isConnected())
+        {
+            if (status != null)
+                status.setText(R.string.no_connection);
+            return;
+        }
+
+        // Check wifi
+        if (wifi && info.getType() != ConnectivityManager.TYPE_WIFI)
+        {
+            if (status != null)
+                status.setText(R.string.no_wifi);
+            return;
+        }
+
+        // Check roaming
+        if (!roaming && info.isRoaming())
+        {
+            if (status != null)
+                status.setText(R.string.roaming);
+            return;
+        }
+
         Calendar today = Calendar.getInstance();
         int year = today.get(Calendar.YEAR);
         int month = today.get(Calendar.MONTH);
@@ -214,7 +302,7 @@ public class Map extends Activity
         double lng = location.getLongitude();
 
         String url = String.format(Locale.getDefault(), TEMPLATE,
-                                   year, month, day, lat, lng, 200, 0);
+                                   year, month + 1, day, lat, lng, 0, 0);
 
         LoadTask loadTask = new LoadTask();
         loadTask.execute(url);
@@ -266,7 +354,50 @@ public class Map extends Activity
         @Override
         protected void onPostExecute(String result)
         {
-            //
+            try
+            {
+                JSONObject json = new JSONObject(result);
+                JSONArray points = json.getJSONArray(POINTS);
+
+                List<IGeoPoint> pointList = new ArrayList<IGeoPoint>();
+                List<Drawable> iconList = new ArrayList<Drawable>();
+
+                for (int i = 0; i < points.length(); i++)
+                {
+                    JSONObject point = points.getJSONObject(i);
+                    JSONArray location = point.getJSONArray(LOCATION);
+
+                    double lat = location.getDouble(0);
+                    double lng = location.getDouble(1);
+
+                    IGeoPoint loc = new GeoPoint(lat, lng);
+                    pointList.add(loc);
+
+                    JSONObject metadata = point.getJSONObject(METADATA);
+                    String forecast = metadata.getString(FORECAST);
+
+                    int j = 0;
+                    int id = -1;
+                    for (String description: DESCRIPTIONS)
+                    {
+                        if (forecast.contentEquals(description))
+                        {
+                            id = IDS[j];
+                            break;
+                        }
+
+                        j++;
+                    }
+
+                    Drawable icon = getResources().getDrawable(id);
+                    iconList.add(icon);
+                }
+
+                icons.set(pointList, iconList);
+                map.invalidate();
+            }
+
+            catch (Exception e) {}
         }
     }
 }

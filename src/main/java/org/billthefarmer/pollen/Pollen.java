@@ -88,6 +88,7 @@ public class Pollen extends Activity
     private Location last = null;
     private LocationManager locationManager;
 
+    private TextView status;
     private ListView list;
 
     // onCreate
@@ -97,6 +98,7 @@ public class Pollen extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
+        status = (TextView) findViewById(R.id.status);
         list = (ListView) findViewById(R.id.list);
 
 	// Acquire a reference to the system Location Manager
@@ -192,6 +194,35 @@ public class Pollen extends Activity
     // loadData
     private void loadData(Location location)
     {
+        // Check connectivity before update
+        ConnectivityManager manager =
+            (ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo info = manager.getActiveNetworkInfo();
+
+        // Check connected
+        if (info == null || !info.isConnected())
+        {
+            if (status != null)
+                status.setText(R.string.no_connection);
+            return;
+        }
+
+        // Check wifi
+        if (wifi && info.getType() != ConnectivityManager.TYPE_WIFI)
+        {
+            if (status != null)
+                status.setText(R.string.no_wifi);
+            return;
+        }
+
+        // Check roaming
+        if (!roaming && info.isRoaming())
+        {
+            if (status != null)
+                status.setText(R.string.roaming);
+            return;
+        }
+
         double lat = location.getLatitude();
         double lng = location.getLongitude();
 

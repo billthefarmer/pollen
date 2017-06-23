@@ -116,7 +116,7 @@ public class Map extends Activity
 
 	// Set the user agent
         Configuration.getInstance()
-            .setUserAgentValue(BuildConfig.APPLICATION_ID);
+            .load(this, PreferenceManager.getDefaultSharedPreferences(this));
 
 	// Get the text view
         status = (TextView)findViewById(R.id.status);
@@ -168,6 +168,9 @@ public class Map extends Activity
         // Get preferences
         SharedPreferences preferences =
             PreferenceManager.getDefaultSharedPreferences(this);
+
+	// Set the user agent
+        Configuration.getInstance().load(this, preferences);
 
         wifi = preferences.getBoolean(Pollen.PREF_WIFI, true);
         roaming = preferences.getBoolean(Pollen.PREF_ROAMING, false);

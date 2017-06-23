@@ -129,7 +129,10 @@ public class Pollen extends Activity
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
 	if (location != null)
+        {
 	    loadData(location);
+            last = location;
+        }
 
         locationManager
             .requestLocationUpdates(LocationManager.GPS_PROVIDER,
@@ -142,8 +145,11 @@ public class Pollen extends Activity
                     if (last != null && location.distanceTo(last) < DISTANCE)
                         locationManager.removeUpdates(this);
 
-                    last = location;
-                    loadData(location);
+                    else
+                    {
+                        loadData(location);
+                        last = location;
+                    }
                 }
  
                 @Override

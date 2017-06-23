@@ -54,6 +54,7 @@ import org.json.JSONObject;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.config.Configuration;
 import org.osmdroid.events.MapAdapter;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
@@ -114,8 +115,8 @@ public class Map extends Activity
         }
 
 	// Set the user agent
-	org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants
-	    .setUserAgentValue(BuildConfig.APPLICATION_ID);
+        Configuration.getInstance()
+            .setUserAgentValue(BuildConfig.APPLICATION_ID);
 
 	// Get the text view
         status = (TextView)findViewById(R.id.status);
@@ -176,13 +177,13 @@ public class Map extends Activity
 
         IMapController mapController = map.getController();
 
+        // Zoom map
+        mapController.setZoom(8);
+
 	if (location != null)
         {
-            last = location;
             loadData(location);
-
-            // Zoom map
-            mapController.setZoom(9);
+            last = location;
 
             // Get point
             IGeoPoint point = new GeoPoint(location);
@@ -193,14 +194,11 @@ public class Map extends Activity
 
         else
         {
-            // Zoom map
-            mapController.setZoom(9);
-
             // Get point
-           IGeoPoint point = new GeoPoint(52.561928, -1.464854);
+            IGeoPoint point = new GeoPoint(52.561928, -1.464854);
 
-           // Centre map
-           mapController.setCenter(point);
+            // Centre map
+            mapController.setCenter(point);
         }
 
         locationManager
@@ -214,13 +212,13 @@ public class Map extends Activity
                     if (last != null && location.distanceTo(last) < DISTANCE)
                         locationManager.removeUpdates(this);
 
-                    last = location;
-                    loadData(location);
+                    else
+                    {
+                        last = location;
+                        loadData(location);
+                    }
 
                     IMapController mapController = map.getController();
-
-                    // Zoom map
-                    mapController.setZoom(9);
 
                     // Get point
                     IGeoPoint point = new GeoPoint(location);
@@ -308,6 +306,7 @@ public class Map extends Activity
         loadTask.execute(url);
     }
 
+    // LoadTask
     private class LoadTask extends AsyncTask<String, Integer, String>
     {
         // doInBackground
@@ -352,6 +351,7 @@ public class Map extends Activity
 
         // onPostExecute
         @Override
+        @SuppressWarnings("deprecation")
         protected void onPostExecute(String result)
         {
             try

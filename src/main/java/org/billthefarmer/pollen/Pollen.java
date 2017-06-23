@@ -403,6 +403,14 @@ public class Pollen extends Activity
                     list.setAdapter(adapter);
                     adapter.notifyDataSetChanged();
                 }
+
+                DateFormat format =
+                    DateFormat.getDateInstance(DateFormat.FULL);
+                Date date = new Date();
+                String string = format.format(date);
+                String updated = getString(R.string.updated);
+                String text = String.format(updated, string);
+                status.setText(text);
             }
 
             catch (Exception e) {}

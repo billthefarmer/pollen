@@ -44,8 +44,10 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -398,6 +400,14 @@ public class Map extends Activity
 
                 icons.set(pointList, iconList);
                 map.invalidate();
+
+                DateFormat format =
+                    DateFormat.getDateInstance(DateFormat.FULL);
+                Date date = new Date();
+                String string = format.format(date);
+                String updated = getString(R.string.updated);
+                String text = String.format(updated, string);
+                status.setText(text);
             }
 
             catch (Exception e) {}

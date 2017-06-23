@@ -21,17 +21,17 @@ import org.osmdroid.views.Projection;
 public class IconListOverlay extends Overlay
 {
     // Usual values in the (U,V) coordinates system of the icon image
-    public static final float ANCHOR_CENTER=0.5f, ANCHOR_LEFT=0.0f,
-        ANCHOR_TOP=0.0f, ANCHOR_RIGHT=1.0f, ANCHOR_BOTTOM=1.0f;
+    public static final float ANCHOR_CENTER = 0.5f, ANCHOR_LEFT = 0.0f,
+        ANCHOR_TOP = 0.0f, ANCHOR_RIGHT = 1.0f, ANCHOR_BOTTOM = 1.0f;
 
     protected List<Drawable> iconList;
     protected List<IGeoPoint> positionList;
 
     protected float bearing = 0.0f;
-    protected float anchorU = ANCHOR_CENTER, anchorV=ANCHOR_CENTER;
-    protected float alpha = 1.0f; //opaque
+    protected float anchorU = ANCHOR_CENTER, anchorV = ANCHOR_CENTER;
+    protected float alpha = 1.0f; // opaque
 
-    protected boolean flat = false; //billboard;
+    protected boolean flat = false; // billboard;
 
     protected Point point = new Point();;
 

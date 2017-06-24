@@ -26,6 +26,8 @@ package org.billthefarmer.pollen;
 import android.app.Activity;
 import android.app.ActionBar;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
@@ -63,6 +65,7 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Overlay;
 import org.osmdroid.views.overlay.CopyrightOverlay;
+import org.osmdroid.views.overlay.mylocation.SimpleLocationOverlay;
 import org.osmdroid.views.overlay.ScaleBarOverlay;
 
 public class Map extends Activity
@@ -98,6 +101,7 @@ public class Map extends Activity
     private TextView status;
     private MapView map;
     private IconListOverlay icons;
+    private SimpleLocationOverlay simpleLocation;
 
     private Location last = null;
     private LocationManager locationManager;
@@ -146,6 +150,9 @@ public class Map extends Activity
 	    scale.setAlignBottom(true);
 	    scale.setAlignRight(true);
 
+            simpleLocation = new SimpleLocationOverlay(this);
+            overlayList.add(simpleLocation);
+
             icons = new IconListOverlay();
             overlayList.add(icons);
         }
@@ -191,10 +198,13 @@ public class Map extends Activity
             last = location;
 
             // Get point
-            IGeoPoint point = new GeoPoint(location);
+            GeoPoint point = new GeoPoint(location);
 
             // Centre map
             mapController.setCenter(point);
+
+            // Update location
+            simpleLocation.setLocation(point);
         }
 
         else
@@ -226,11 +236,14 @@ public class Map extends Activity
                     IMapController mapController = map.getController();
 
                     // Get point
-                    IGeoPoint point = new GeoPoint(location);
+                    GeoPoint point = new GeoPoint(location);
 
                     // Centre map
                     mapController.setCenter(point);
-                }
+
+                    // Update location
+                    simpleLocation.setLocation(point);
+               }
  
                 @Override
                 public void onStatusChanged(String provider,

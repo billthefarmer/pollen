@@ -69,9 +69,8 @@ public class Pollen extends Activity
     private final static String TEMPERATURE = "temperature";
     private final static String WEATHER = "weather";
     private final static String FORECAST = "forecast";
-
-    public final static String PREF_WIFI = "pref_wifi";
-    public final static String PREF_ROAMING = "pref_roaming";
+    private final static String LATITUDE = "latitude";
+    private final static String LONGITUDE = "longitude";
 
     public final static String TEMPLATE =
         "https://socialpollencount.co.uk/api/forecast?" +
@@ -81,9 +80,6 @@ public class Pollen extends Activity
 
     public final static int DELAY = 5000;
     public final static int DISTANCE = 50000;
-
-    private boolean wifi = true;
-    private boolean roaming = false;
 
     private Location last = null;
     private LocationManager locationManager;
@@ -100,6 +96,12 @@ public class Pollen extends Activity
 
         status = (TextView) findViewById(R.id.status);
         list = (ListView) findViewById(R.id.list);
+
+        if (savedInstanceState != null)
+        {
+            double lat = savedInstanceState.getDouble(LATITUDE);
+            double lng = savedInstanceState.getDouble(LONGITUDE);
+        }
 
 	// Acquire a reference to the system Location Manager
         locationManager = (LocationManager)
@@ -118,13 +120,6 @@ public class Pollen extends Activity
     {
         super.onResume();
 
-        // Get preferences
-        SharedPreferences preferences =
-            PreferenceManager.getDefaultSharedPreferences(this);
-
-        wifi = preferences.getBoolean(PREF_WIFI, true);
-        roaming = preferences.getBoolean(PREF_ROAMING, false);
-
 	Location location =
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
@@ -135,17 +130,14 @@ public class Pollen extends Activity
         }
 
         locationManager
-            .requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                                    DELAY, 0, new LocationListener()
+            .requestSingleUpdate(LocationManager.GPS_PROVIDER,
+                                 new LocationListener()
             {
                 // onLocationChanged
                 @Override
                 public void onLocationChanged(Location location)
                 {
-                    if (last != null && location.distanceTo(last) < DISTANCE)
-                        locationManager.removeUpdates(this);
-
-                    else
+                    if (last == null || location.distanceTo(last) > DISTANCE)
                     {
                         loadData(location);
                         last = location;
@@ -161,7 +153,7 @@ public class Pollen extends Activity
 
                 @Override
                 public void onProviderDisabled(String provider) {}
-           });
+            }, null);
     }
 
     // onCreateOptionsMenu
@@ -210,22 +202,6 @@ public class Pollen extends Activity
         {
             if (status != null)
                 status.setText(R.string.no_connection);
-            return;
-        }
-
-        // Check wifi
-        if (wifi && info.getType() != ConnectivityManager.TYPE_WIFI)
-        {
-            if (status != null)
-                status.setText(R.string.no_wifi);
-            return;
-        }
-
-        // Check roaming
-        if (!roaming && info.isRoaming())
-        {
-            if (status != null)
-                status.setText(R.string.roaming);
             return;
         }
 

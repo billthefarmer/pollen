@@ -95,9 +95,6 @@ public class Map extends Activity
     public final static int DELAY = 5000;
     public final static int DISTANCE = 50000;
 
-    private boolean wifi = true;
-    private boolean roaming = false;
-
     private TextView status;
     private MapView map;
     private IconListOverlay icons;
@@ -180,9 +177,6 @@ public class Map extends Activity
 
 	// Set the user agent
         Configuration.getInstance().load(this, preferences);
-
-        wifi = preferences.getBoolean(Pollen.PREF_WIFI, true);
-        roaming = preferences.getBoolean(Pollen.PREF_ROAMING, false);
 
 	Location location =
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -290,22 +284,6 @@ public class Map extends Activity
         {
             if (status != null)
                 status.setText(R.string.no_connection);
-            return;
-        }
-
-        // Check wifi
-        if (wifi && info.getType() != ConnectivityManager.TYPE_WIFI)
-        {
-            if (status != null)
-                status.setText(R.string.no_wifi);
-            return;
-        }
-
-        // Check roaming
-        if (!roaming && info.isRoaming())
-        {
-            if (status != null)
-                status.setText(R.string.roaming);
             return;
         }
 

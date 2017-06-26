@@ -35,7 +35,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -82,6 +81,7 @@ public class Pollen extends Activity
     public final static int DISTANCE = 50000;
 
     private Location last = null;
+    private Location location = null;
     private LocationManager locationManager;
 
     private TextView status;
@@ -101,17 +101,27 @@ public class Pollen extends Activity
         {
             double lat = savedInstanceState.getDouble(LATITUDE);
             double lng = savedInstanceState.getDouble(LONGITUDE);
+
+            location = new Location(TAG);
+            location.setLatitude(lat);
+            location.setLongitude(lng);
+
+            last = location;
         }
 
-	// Acquire a reference to the system Location Manager
-        locationManager = (LocationManager)
-	    getSystemService(LOCATION_SERVICE);
+        if (location == null)
+        {
+            // Acquire a reference to the system Location Manager
+            locationManager = (LocationManager)
+                getSystemService(LOCATION_SERVICE);
 
-	Location location =
-	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            location =
+                locationManager
+                .getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
-        if (location != null)
-            last = location;
+            if (location != null)
+                last = location;
+        }
     }
 
     // On resume
@@ -120,7 +130,7 @@ public class Pollen extends Activity
     {
         super.onResume();
 
-	Location location =
+        location =
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
 	if (location != null)
@@ -156,6 +166,22 @@ public class Pollen extends Activity
             }, null);
     }
 
+    // onSaveInstanceState
+    @Override
+    protected void onSaveInstanceState (Bundle outState)
+    {
+        super.onSaveInstanceState(outState);
+
+        if (location != null)
+        {
+            double lat = location.getLatitude();
+            double lng = location.getLongitude();
+
+            outState.putDouble(LATITUDE, lat);
+            outState.putDouble(LONGITUDE, lng);
+        }
+    }
+
     // onCreateOptionsMenu
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
@@ -169,8 +195,10 @@ public class Pollen extends Activity
     @Override
     public boolean onOptionsItemSelected(MenuItem item)
     {
+        // Get id
         switch (item.getItemId())
         {
+        // Map
         case R.id.action_map:
             onMapClick();
             break;
@@ -192,9 +220,11 @@ public class Pollen extends Activity
     // loadData
     private void loadData(Location location)
     {
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+
         // Check connectivity before update
-        ConnectivityManager manager =
-            (ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        ConnectivityManager manager = (ConnectivityManager)
+            getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo info = manager.getActiveNetworkInfo();
 
         // Check connected
@@ -365,7 +395,12 @@ public class Pollen extends Activity
             try
             {
                 JSONObject json = new JSONObject(result);
+                String dateString = json.getString(DATE);
                 JSONArray forecast = json.getJSONArray(FORECAST);
+
+                DateFormat parseFormat =
+                    new SimpleDateFormat(FORMAT, Locale.getDefault());
+                Date date = parseFormat.parse(dateString);
 
                 List<JSONObject> forecastList = new ArrayList<JSONObject>();
 
@@ -380,9 +415,14 @@ public class Pollen extends Activity
                     adapter.notifyDataSetChanged();
                 }
 
+                SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putLong(DATE, date.getTime());
+                editor.putString(FORECAST, forecast.toString());
+                editor.apply();
+
                 DateFormat format =
                     DateFormat.getDateInstance(DateFormat.FULL);
-                Date date = new Date();
                 String string = format.format(date);
                 String updated = getString(R.string.updated);
                 String text = String.format(updated, string);

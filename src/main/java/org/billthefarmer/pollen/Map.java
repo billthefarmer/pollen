@@ -26,9 +26,8 @@ package org.billthefarmer.pollen;
 import android.app.Activity;
 import android.app.ActionBar;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.BitmapDrawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -47,6 +46,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -72,14 +72,19 @@ public class Map extends Activity
 {
     private final static String TAG = "Map";
 
-    private final static String TEMPLATE =
-        "https://socialpollencount.co.uk/api/points/%04d/%02d/%02d?" +
-        "location=[%f,%f]&distance=%d&platform=mobile&hotspots=%d";
-
+    private final static String DATE     = "date";
     private final static String POINTS   = "points";
     private final static String LOCATION = "location";
     private final static String METADATA = "metadata";
     private final static String FORECAST = "forecast";
+    private final static String LATITUDE = "latitude";
+    private final static String LONGITUDE = "longitude";
+
+    private final static String TEMPLATE =
+        "https://socialpollencount.co.uk/api/points/%04d/%02d/%02d?" +
+        "location=[%f,%f]&distance=%d&platform=mobile&hotspots=%d";
+    public final static String FORMAT =
+        "yyyy-MM-dd'T'HH:mm:ss";
 
     private final static String DESCRIPTIONS[] =
     {
@@ -101,10 +106,12 @@ public class Map extends Activity
     private SimpleLocationOverlay simpleLocation;
 
     private Location last = null;
+    private Location location = null;
     private LocationManager locationManager;
 
     // onCreate
     @Override
+    @SuppressWarnings("deprecation")
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
@@ -113,9 +120,7 @@ public class Map extends Activity
         // Enable back navigation on action bar
         ActionBar actionBar = getActionBar();
         if (actionBar != null)
-        {
             actionBar.setDisplayHomeAsUpEnabled(true);
-        }
 
 	// Set the user agent
         Configuration.getInstance()
@@ -147,22 +152,41 @@ public class Map extends Activity
 	    scale.setAlignBottom(true);
 	    scale.setAlignRight(true);
 
-            simpleLocation = new SimpleLocationOverlay(this);
+            simpleLocation =
+                new SimpleLocationOverlay(((BitmapDrawable) this.getResources()
+                                           .getDrawable(R.drawable.person))
+                                          .getBitmap());
             overlayList.add(simpleLocation);
 
             icons = new IconListOverlay();
             overlayList.add(icons);
         }
 
-	// Acquire a reference to the system Location Manager
-        locationManager = (LocationManager)
-	    getSystemService(LOCATION_SERVICE);
+        if (savedInstanceState != null)
+        {
+            double lat = savedInstanceState.getDouble(LATITUDE);
+            double lng = savedInstanceState.getDouble(LONGITUDE);
 
-	Location location =
-	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            location = new Location(TAG);
+            location.setLatitude(lat);
+            location.setLongitude(lng);
 
-        if (location != null)
             last = location;
+        }
+
+        if (location == null)
+        {
+            // Acquire a reference to the system Location Manager
+            locationManager = (LocationManager)
+                getSystemService(LOCATION_SERVICE);
+
+            location =
+                locationManager
+                .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+            if (location != null)
+                last = location;
+        }
     }
 
     // On resume
@@ -171,14 +195,7 @@ public class Map extends Activity
     {
         super.onResume();
 
-        // Get preferences
-        SharedPreferences preferences =
-            PreferenceManager.getDefaultSharedPreferences(this);
-
-	// Set the user agent
-        Configuration.getInstance().load(this, preferences);
-
-	Location location =
+        location =
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
         IMapController mapController = map.getController();
@@ -211,20 +228,18 @@ public class Map extends Activity
         }
 
         locationManager
-            .requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                                    DELAY, 0, new LocationListener()
+            .requestSingleUpdate(LocationManager.GPS_PROVIDER,
+                                 new LocationListener()
             {
                 // onLocationChanged
                 @Override
                 public void onLocationChanged(Location location)
                 {
-                    if (last != null && location.distanceTo(last) < DISTANCE)
+                    if (last == null || location.distanceTo(last) > DISTANCE)
                         locationManager.removeUpdates(this);
-
-                    else
                     {
-                        last = location;
                         loadData(location);
+                        last = location;
                     }
 
                     IMapController mapController = map.getController();
@@ -248,7 +263,23 @@ public class Map extends Activity
 
                 @Override
                 public void onProviderDisabled(String provider) {}
-           });
+            }, null);
+    }
+
+    // onSaveInstanceState
+    @Override
+    protected void onSaveInstanceState (Bundle outState)
+    {
+        super.onSaveInstanceState(outState);
+
+        if (location != null)
+        {
+            double lat = location.getLatitude();
+            double lng = location.getLongitude();
+
+            outState.putDouble(LATITUDE, lat);
+            outState.putDouble(LONGITUDE, lng);
+        }
     }
 
     // onOptionsItemSelected
@@ -271,12 +302,32 @@ public class Map extends Activity
         return true;
     }
 
+    // getDrawable
+    @SuppressWarnings("deprecation")
+    private Drawable getDrawable(String string)
+    {
+        int j = 0;
+        int id = -1;
+        for (String description: DESCRIPTIONS)
+        {
+            if (string.contentEquals(description))
+            {
+                id = IDS[j];
+                break;
+            }
+
+            j++;
+        }
+
+        return getResources().getDrawable(id);
+    }
+
     // loadData
     private void loadData(Location location)
     {
         // Check connectivity before update
-        ConnectivityManager manager =
-            (ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        ConnectivityManager manager = (ConnectivityManager)
+            getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo info = manager.getActiveNetworkInfo();
 
         // Check connected
@@ -347,13 +398,17 @@ public class Map extends Activity
 
         // onPostExecute
         @Override
-        @SuppressWarnings("deprecation")
         protected void onPostExecute(String result)
         {
             try
             {
                 JSONObject json = new JSONObject(result);
+                String dateString = json.getString(DATE);
                 JSONArray points = json.getJSONArray(POINTS);
+
+                DateFormat parseFormat =
+                    new SimpleDateFormat(FORMAT, Locale.getDefault());
+                Date date = parseFormat.parse(dateString);
 
                 List<IGeoPoint> pointList = new ArrayList<IGeoPoint>();
                 List<Drawable> iconList = new ArrayList<Drawable>();
@@ -366,35 +421,27 @@ public class Map extends Activity
                     double lat = location.getDouble(0);
                     double lng = location.getDouble(1);
 
-                    IGeoPoint loc = new GeoPoint(lat, lng);
-                    pointList.add(loc);
+                    IGeoPoint geoPoint = new GeoPoint(lat, lng);
+                    pointList.add(geoPoint);
 
                     JSONObject metadata = point.getJSONObject(METADATA);
                     String forecast = metadata.getString(FORECAST);
 
-                    int j = 0;
-                    int id = -1;
-                    for (String description: DESCRIPTIONS)
-                    {
-                        if (forecast.contentEquals(description))
-                        {
-                            id = IDS[j];
-                            break;
-                        }
-
-                        j++;
-                    }
-
-                    Drawable icon = getResources().getDrawable(id);
+                    Drawable icon = getDrawable(forecast);
                     iconList.add(icon);
                 }
 
                 icons.set(pointList, iconList);
                 map.invalidate();
 
+                SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putLong(DATE, date.getTime());
+                editor.putString(POINTS, points.toString());
+                editor.apply();
+
                 DateFormat format =
                     DateFormat.getDateInstance(DateFormat.FULL);
-                Date date = new Date();
                 String string = format.format(date);
                 String updated = getString(R.string.updated);
                 String text = String.format(updated, string);

@@ -97,6 +97,10 @@ public class Pollen extends Activity
         status = (TextView) findViewById(R.id.status);
         list = (ListView) findViewById(R.id.list);
 
+        // Acquire a reference to the system Location Manager
+        locationManager = (LocationManager)
+            getSystemService(LOCATION_SERVICE);
+
         if (savedInstanceState != null)
         {
             double lat = savedInstanceState.getDouble(LATITUDE);
@@ -111,10 +115,6 @@ public class Pollen extends Activity
 
         if (location == null)
         {
-            // Acquire a reference to the system Location Manager
-            locationManager = (LocationManager)
-                getSystemService(LOCATION_SERVICE);
-
             location =
                 locationManager
                 .getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -129,6 +129,8 @@ public class Pollen extends Activity
     protected void onResume()
     {
         super.onResume();
+
+        status.setText(R.string.locating);
 
         location =
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -232,6 +234,39 @@ public class Pollen extends Activity
         {
             if (status != null)
                 status.setText(R.string.no_connection);
+
+            long millis = preferences.getLong(DATE, -1);
+            String forecastString = preferences.getString(FORECAST, null);
+
+            if (millis < 0 || forecastString == null)
+                return;
+
+            try
+            {
+                JSONArray forecast = new JSONArray(forecastString);
+                List<JSONObject> forecastList = new ArrayList<JSONObject>();
+                for (int i = 0; i < forecast.length(); i++)
+                    forecastList.add(forecast.getJSONObject(i));
+
+                PollenAdapter adapter = new PollenAdapter(forecastList);
+
+                if (list != null)
+                {
+                    list.setAdapter(adapter);
+                    adapter.notifyDataSetChanged();
+                }
+
+                DateFormat format =
+                    DateFormat.getDateInstance(DateFormat.FULL);
+                Date date = new Date(millis);
+                String string = format.format(date);
+                String updated = getString(R.string.updated);
+                String text = String.format(updated, string);
+                status.setText(text);
+            }
+
+            catch (Exception e) {}
+
             return;
         }
 

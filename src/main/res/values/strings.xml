@@ -6,6 +6,7 @@
   <string name="map">Map</string>
 
   <string name="no_connection">No connection</string>
+  <string name="locating">Locating…</string>
   <string name="updated">Updated %s</string>
 
 </resources>

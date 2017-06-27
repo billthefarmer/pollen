@@ -162,6 +162,10 @@ public class Map extends Activity
             overlayList.add(icons);
         }
 
+        // Acquire a reference to the system Location Manager
+        locationManager = (LocationManager)
+            getSystemService(LOCATION_SERVICE);
+
         if (savedInstanceState != null)
         {
             double lat = savedInstanceState.getDouble(LATITUDE);
@@ -176,10 +180,6 @@ public class Map extends Activity
 
         if (location == null)
         {
-            // Acquire a reference to the system Location Manager
-            locationManager = (LocationManager)
-                getSystemService(LOCATION_SERVICE);
-
             location =
                 locationManager
                 .getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -194,6 +194,8 @@ public class Map extends Activity
     protected void onResume()
     {
         super.onResume();
+
+        status.setText(R.string.locating);
 
         location =
 	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -221,7 +223,7 @@ public class Map extends Activity
         else
         {
             // Get point
-            IGeoPoint point = new GeoPoint(52.561928, -1.464854);
+            GeoPoint point = new GeoPoint(52.561928, -1.464854);
 
             // Centre map
             mapController.setCenter(point);
@@ -236,24 +238,23 @@ public class Map extends Activity
                 public void onLocationChanged(Location location)
                 {
                     if (last == null || location.distanceTo(last) > DISTANCE)
-                        locationManager.removeUpdates(this);
                     {
                         loadData(location);
                         last = location;
+
+                        IMapController mapController = map.getController();
+
+                        // Get point
+                        GeoPoint point = new GeoPoint(location);
+
+                        // Centre map
+                        mapController.setCenter(point);
+
+                        // Update location
+                        simpleLocation.setLocation(point);
                     }
+                }
 
-                    IMapController mapController = map.getController();
-
-                    // Get point
-                    GeoPoint point = new GeoPoint(location);
-
-                    // Centre map
-                    mapController.setCenter(point);
-
-                    // Update location
-                    simpleLocation.setLocation(point);
-               }
- 
                 @Override
                 public void onStatusChanged(String provider,
                                             int status, Bundle extras) {}
@@ -310,7 +311,7 @@ public class Map extends Activity
         int id = -1;
         for (String description: DESCRIPTIONS)
         {
-            if (string.contentEquals(description))
+            if (string.equals(description))
             {
                 id = IDS[j];
                 break;
@@ -325,6 +326,8 @@ public class Map extends Activity
     // loadData
     private void loadData(Location location)
     {
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+
         // Check connectivity before update
         ConnectivityManager manager = (ConnectivityManager)
             getSystemService(CONNECTIVITY_SERVICE);
@@ -335,6 +338,52 @@ public class Map extends Activity
         {
             if (status != null)
                 status.setText(R.string.no_connection);
+
+            long millis = preferences.getLong(DATE, -1);
+            String pointString = preferences.getString(FORECAST, null);
+
+            if (millis < 0 || pointString == null)
+                return;
+ 
+            try
+            {
+                JSONArray points = new JSONArray(pointString);
+ 
+                List<IGeoPoint> pointList = new ArrayList<IGeoPoint>();
+                List<Drawable> iconList = new ArrayList<Drawable>();
+
+                for (int i = 0; i < points.length(); i++)
+                {
+                    JSONObject point = points.getJSONObject(i);
+                    JSONArray loc = point.getJSONArray(LOCATION);
+
+                    double lat = loc.getDouble(0);
+                    double lng = loc.getDouble(1);
+
+                    IGeoPoint geoPoint = new GeoPoint(lat, lng);
+                    pointList.add(geoPoint);
+
+                    JSONObject metadata = point.getJSONObject(METADATA);
+                    String forecast = metadata.getString(FORECAST);
+
+                    Drawable icon = getDrawable(forecast);
+                    iconList.add(icon);
+                }
+
+                icons.set(pointList, iconList);
+                map.invalidate();
+
+                DateFormat format =
+                    DateFormat.getDateInstance(DateFormat.FULL);
+                Date date = new Date(millis);
+                String string = format.format(date);
+                String updated = getString(R.string.updated);
+                String text = String.format(updated, string);
+                status.setText(text);
+           }
+
+            catch (Exception e) {}
+
             return;
         }
 

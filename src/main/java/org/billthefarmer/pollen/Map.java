@@ -205,28 +205,22 @@ public class Map extends Activity
         // Zoom map
         mapController.setZoom(8);
 
+        // Get point
+        GeoPoint point = new GeoPoint(52.561928, -1.464854);
+
+        // Centre map
+        mapController.setCenter(point);
+
 	if (location != null)
         {
             loadData(location);
             last = location;
 
             // Get point
-            GeoPoint point = new GeoPoint(location);
-
-            // Centre map
-            mapController.setCenter(point);
+            point = new GeoPoint(location);
 
             // Update location
             simpleLocation.setLocation(point);
-        }
-
-        else
-        {
-            // Get point
-            GeoPoint point = new GeoPoint(52.561928, -1.464854);
-
-            // Centre map
-            mapController.setCenter(point);
         }
 
         locationManager

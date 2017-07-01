@@ -23,6 +23,7 @@
 
 package org.billthefarmer.pollen;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActionBar;
 import android.content.SharedPreferences;
@@ -36,6 +37,7 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -82,7 +84,7 @@ public class Map extends Activity
 
     private final static String TEMPLATE =
         "https://socialpollencount.co.uk/api/points/%04d/%02d/%02d?" +
-        "location=[%f,%f]&distance=%d&platform=mobile&hotspots=%d";
+        "location=[%f,%f]&distance=%d&platform=mobile&hotspots=%d&user=%s";
     public final static String FORMAT =
         "yyyy-MM-dd'T'HH:mm:ss";
 
@@ -241,9 +243,6 @@ public class Map extends Activity
                         // Get point
                         GeoPoint point = new GeoPoint(location);
 
-                        // Centre map
-                        mapController.setCenter(point);
-
                         // Update location
                         simpleLocation.setLocation(point);
                     }
@@ -318,6 +317,7 @@ public class Map extends Activity
     }
 
     // loadData
+    @SuppressLint("HardwareIds")
     private void loadData(Location location)
     {
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
@@ -389,8 +389,12 @@ public class Map extends Activity
         double lat = location.getLatitude();
         double lng = location.getLongitude();
 
+        String android_id =
+            Settings.Secure.getString(getContentResolver(),
+                                      Settings.Secure.ANDROID_ID);
         String url = String.format(Locale.getDefault(), TEMPLATE,
-                                   year, month + 1, day, lat, lng, 0, 0);
+                                   year, month + 1, day, lat, lng, 0, 0,
+                                   android_id);
 
         LoadTask loadTask = new LoadTask();
         loadTask.execute(url);

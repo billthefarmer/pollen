@@ -205,7 +205,7 @@ public class Map extends Activity
         IMapController mapController = map.getController();
 
         // Zoom map
-        mapController.setZoom(8);
+        mapController.setZoom(7);
 
         // Get point
         GeoPoint point = new GeoPoint(52.561928, -1.464854);

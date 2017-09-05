@@ -155,9 +155,7 @@ public class Map extends Activity
 	    scale.setAlignRight(true);
 
             simpleLocation =
-                new SimpleLocationOverlay(((BitmapDrawable) this.getResources()
-                                           .getDrawable(R.drawable.person))
-                                          .getBitmap());
+                new SimpleLocationOverlay(this);
             overlayList.add(simpleLocation);
 
             icons = new IconListOverlay();

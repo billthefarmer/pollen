@@ -35,6 +35,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -71,9 +72,10 @@ public class Pollen extends Activity
     private final static String LATITUDE = "latitude";
     private final static String LONGITUDE = "longitude";
 
-    public final static String TEMPLATE =
-        "https://socialpollencount.co.uk/api/forecast?" +
-        "location=[%f,%f]&platform=mobile";
+    public final static String POLLEN =
+        "aHR0cHM6Ly9zb2NpYWxwb2xsZW5jb3VudC5jby51ay9hcGkvZm9yZWNhc3Q/bG9j" +
+        "YXRpb249WyVmLCVmXSZwbGF0Zm9ybT1tb2JpbGUK";
+
     public final static String FORMAT =
         "yyyy-MM-dd'T'HH:mm:ss";
 
@@ -273,7 +275,8 @@ public class Pollen extends Activity
         double lat = location.getLatitude();
         double lng = location.getLongitude();
 
-        String url = String.format(Locale.getDefault(), TEMPLATE, lat, lng);
+        String template = new String(Base64.decode(POLLEN, Base64.DEFAULT));
+        String url = String.format(Locale.getDefault(), template, lat, lng);
 
         LoadTask loadTask = new LoadTask();
         loadTask.execute(url);

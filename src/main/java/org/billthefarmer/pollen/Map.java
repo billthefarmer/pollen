@@ -38,6 +38,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.util.Base64;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -82,9 +83,11 @@ public class Map extends Activity
     private final static String LATITUDE = "latitude";
     private final static String LONGITUDE = "longitude";
 
-    private final static String TEMPLATE =
-        "https://socialpollencount.co.uk/api/points/%04d/%02d/%02d?" +
-        "location=[%f,%f]&distance=%d&platform=mobile&hotspots=%d&user=%s";
+    private final static String POLLEN =
+        "aHR0cHM6Ly9zb2NpYWxwb2xsZW5jb3VudC5jby51ay9hcGkvcG9pbnRzLyUwNGQv" +
+        "JTAyZC8lMDJkP2xvY2F0aW9uPVslZiwlZl0mZGlzdGFuY2U9JWQmcGxhdGZvcm09" +
+        "bW9iaWxlJmhvdHNwb3RzPSVkJnVzZXI9JXMK";
+
     public final static String FORMAT =
         "yyyy-MM-dd'T'HH:mm:ss";
 
@@ -390,7 +393,8 @@ public class Map extends Activity
         String android_id =
             Settings.Secure.getString(getContentResolver(),
                                       Settings.Secure.ANDROID_ID);
-        String url = String.format(Locale.getDefault(), TEMPLATE,
+        String template = new String(Base64.decode(POLLEN, Base64.DEFAULT));
+        String url = String.format(Locale.getDefault(), template,
                                    year, month + 1, day, lat, lng, 0, 0,
                                    android_id);
 

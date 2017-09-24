@@ -35,6 +35,7 @@ import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -318,7 +319,6 @@ public class Map extends Activity
     }
 
     // loadData
-    @SuppressLint("HardwareIds")
     private void loadData(Location location)
     {
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
@@ -390,13 +390,10 @@ public class Map extends Activity
         double lat = location.getLatitude();
         double lng = location.getLongitude();
 
-        String android_id =
-            Settings.Secure.getString(getContentResolver(),
-                                      Settings.Secure.ANDROID_ID);
         String template = new String(Base64.decode(POLLEN, Base64.DEFAULT));
         String url = String.format(Locale.getDefault(), template,
                                    year, month + 1, day, lat, lng, 0, 0,
-                                   android_id);
+                                   Build.SERIAL);
 
         LoadTask loadTask = new LoadTask();
         loadTask.execute(url);

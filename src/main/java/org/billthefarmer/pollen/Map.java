@@ -23,9 +23,9 @@
 
 package org.billthefarmer.pollen;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActionBar;
+import android.app.DatePickerDialog;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.BitmapDrawable;
@@ -41,8 +41,11 @@ import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.DatePicker;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -107,6 +110,7 @@ public class Map extends Activity
     public final static int DISTANCE = 50000;
 
     private TextView status;
+    private TextView when;
     private MapView map;
     private IconListOverlay icons;
     private SimpleLocationOverlay simpleLocation;
@@ -121,6 +125,14 @@ public class Map extends Activity
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+        SharedPreferences preferences =
+            PreferenceManager.getDefaultSharedPreferences(this);
+        boolean dark = preferences.getBoolean(Pollen.DARK, true);
+
+        if (dark)
+            setTheme(R.style.AppDarkTheme);
+
         setContentView(R.layout.map);
 
         // Enable back navigation on action bar
@@ -132,8 +144,9 @@ public class Map extends Activity
         Configuration.getInstance()
             .load(this, PreferenceManager.getDefaultSharedPreferences(this));
 
-	// Get the text view
+	// Get the text views
         status = (TextView)findViewById(R.id.status);
+        when = (TextView)findViewById(R.id.when);
 
 	// Get the map
         map = (MapView)findViewById(R.id.map);
@@ -262,6 +275,15 @@ public class Map extends Activity
             }, null);
     }
 
+    // onCreateOptionsMenu
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.map, menu);
+        return true;
+    }
+
     // onSaveInstanceState
     @Override
     protected void onSaveInstanceState (Bundle outState)
@@ -286,9 +308,14 @@ public class Map extends Activity
         int id = item.getItemId();
         switch (id)
         {
-        // Home
+            // Home
         case android.R.id.home:
             finish();
+            break;
+
+            // Date
+        case R.id.action_date:
+            onDateClick();
             break;
 
         default:
@@ -296,6 +323,56 @@ public class Map extends Activity
         }
 
         return true;
+    }
+
+    // onDateClick
+    private void onDateClick()
+    {
+        Calendar calendar = Calendar.getInstance();
+        DatePickerDialog dialog = new
+            DatePickerDialog(this, new DatePickerDialog.OnDateSetListener()
+                {
+                    public void onDateSet (DatePicker view, 
+                                           int year, 
+                                           int month, 
+                                           int day)
+                    {
+                        // Check connectivity before update
+                        ConnectivityManager manager = (ConnectivityManager)
+                            getSystemService(CONNECTIVITY_SERVICE);
+                        NetworkInfo info = manager.getActiveNetworkInfo();
+
+                        // Check connected
+                        if (info == null || !info.isConnected())
+                        {
+                            if (status != null)
+                                status.setText(R.string.no_connection);
+
+                            return;
+                        }
+
+                        // Check location
+                        if (location == null)
+                            return;
+
+                        double lat = location.getLatitude();
+                        double lng = location.getLongitude();
+
+                        String template = new
+                            String(Base64.decode(POLLEN, Base64.DEFAULT));
+                        String url = String.format(Locale.getDefault(),
+                                                   template,
+                                                   year, month + 1, day,
+                                                   lat, lng, 0, 0,
+                                                   Build.SERIAL);
+
+                        LoadTask loadTask = new LoadTask();
+                        loadTask.execute(url);                    }
+                },
+                             calendar.get(Calendar.YEAR),
+                             calendar.get(Calendar.MONTH),
+                             calendar.get(Calendar.DATE));
+        dialog.show();
     }
 
     // getDrawable
@@ -492,6 +569,20 @@ public class Map extends Activity
                 String updated = getString(R.string.updated);
                 String text = String.format(updated, string);
                 status.setText(text);
+
+                if (!pointList.isEmpty())
+                {
+                    JSONObject point = points.getJSONObject(0);
+                    JSONObject metadata = point.getJSONObject(METADATA);
+                    dateString = metadata.getString(DATE);
+
+                    date = parseFormat.parse(dateString);
+                    text = format.format(date);
+                    when.setText(text);
+                }
+
+                else
+                    when.setText(R.string.no_data);
             }
 
             catch (Exception e) {}

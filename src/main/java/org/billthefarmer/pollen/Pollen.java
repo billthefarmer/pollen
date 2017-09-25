@@ -34,7 +34,9 @@ import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
@@ -53,6 +55,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -72,6 +75,8 @@ public class Pollen extends Activity
     private final static String LATITUDE = "latitude";
     private final static String LONGITUDE = "longitude";
 
+    public final static String DARK = "dark";
+
     public final static String POLLEN =
         "aHR0cHM6Ly9zb2NpYWxwb2xsZW5jb3VudC5jby51ay9hcGkvZm9yZWNhc3Q/bG9j" +
         "YXRpb249WyVmLCVmXSZwbGF0Zm9ybT1tb2JpbGUK";
@@ -82,21 +87,35 @@ public class Pollen extends Activity
     public final static int DELAY = 5000;
     public final static int DISTANCE = 50000;
 
+    private final static int VERSION_M = 23;
+
     private Location last = null;
     private Location location = null;
     private LocationManager locationManager;
 
     private TextView status;
+    private TextView empty;
     private ListView list;
+
+    private boolean dark;
 
     // onCreate
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+        SharedPreferences preferences =
+            PreferenceManager.getDefaultSharedPreferences(this);
+        dark = preferences.getBoolean(DARK, true);
+
+        if (dark)
+            setTheme(R.style.AppDarkTheme);
+
         setContentView(R.layout.main);
 
         status = (TextView) findViewById(R.id.status);
+        empty = (TextView) findViewById(R.id.empty);
         list = (ListView) findViewById(R.id.list);
 
         // Acquire a reference to the system Location Manager
@@ -186,12 +205,34 @@ public class Pollen extends Activity
         }
     }
 
+    // onPause
+    @Override
+    public void onPause ()
+    {
+        super.onPause();
+
+        SharedPreferences preferences =
+            PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        editor.putBoolean(DARK, dark);
+        editor.apply();
+    }
+
     // onCreateOptionsMenu
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
+        return true;
+    }
+
+    // onPrepareOptionsMenu
+    @Override
+    public boolean onPrepareOptionsMenu (Menu menu)
+    {
+        menu.findItem(R.id.action_dark).setChecked (dark);
         return true;
     }
 
@@ -202,9 +243,14 @@ public class Pollen extends Activity
         // Get id
         switch (item.getItemId())
         {
-        // Map
+            // Map
         case R.id.action_map:
             onMapClick();
+            break;
+
+            // Dark
+        case R.id.action_dark:
+            onDarkClick(item);
             break;
 
         default:
@@ -219,6 +265,16 @@ public class Pollen extends Activity
     {
         Intent intent = new Intent(this, Map.class);
         startActivity(intent);
+    }
+
+    // onDarkClick
+    private void onDarkClick(MenuItem item)
+    {
+        dark = !dark;
+        item.setChecked(dark);
+
+        if (Build.VERSION.SDK_INT != VERSION_M)
+            recreate();
     }
 
     // loadData
@@ -257,6 +313,9 @@ public class Pollen extends Activity
                     list.setAdapter(adapter);
                     adapter.notifyDataSetChanged();
                 }
+
+                if ((empty != null) && (forecastList.isEmpty()))
+                    empty.setText(R.string.no_data);
 
                 DateFormat format =
                     DateFormat.getDateInstance(DateFormat.FULL);
@@ -452,6 +511,9 @@ public class Pollen extends Activity
                     list.setAdapter(adapter);
                     adapter.notifyDataSetChanged();
                 }
+
+                if ((empty != null) && (forecastList.isEmpty()))
+                    empty.setText(R.string.no_data);
 
                 SharedPreferences preferences = getPreferences(MODE_PRIVATE);
                 SharedPreferences.Editor editor = preferences.edit();

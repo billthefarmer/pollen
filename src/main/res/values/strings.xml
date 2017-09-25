@@ -4,8 +4,11 @@
   <string name="app_name">Pollen</string>
 
   <string name="map">Map</string>
+  <string name="date">Date</string>
+  <string name="dark">Dark theme</string>
 
   <string name="no_connection">No connection</string>
+  <string name="no_data">No data</string>
   <string name="locating">Locating…</string>
   <string name="updated">Updated %s</string>
 

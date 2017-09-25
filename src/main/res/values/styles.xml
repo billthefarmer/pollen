@@ -7,6 +7,15 @@
       devices.
   -->
   <style name="AppBaseTheme"
+         parent="android:Theme.Holo.Light.DarkActionBar">
+    <!--
+        Theme customizations available in newer API levels can go in
+        res/values-vXX/styles.xml, while customizations related to
+        backward-compatibility can go here.
+    -->
+  </style>
+
+  <style name="AppDarkBaseTheme"
          parent="android:Theme.Holo">
     <!--
         Theme customizations available in newer API levels can go in
@@ -17,6 +26,14 @@
 
   <!-- Application theme. -->
   <style name="AppTheme" parent="AppBaseTheme">
+    <!--
+        All customizations that are NOT specific to a particular
+        API-level can go here.
+    -->
+  </style>
+
+  <!-- Application theme. -->
+  <style name="AppDarkTheme" parent="AppDarkBaseTheme">
     <!--
         All customizations that are NOT specific to a particular
         API-level can go here.

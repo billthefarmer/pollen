@@ -5,7 +5,7 @@
     tools:ignore="RtlHardcoded"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:layout_marginTop="4dp"
     android:layout_marginLeft="8dp"
     android:layout_marginRight="8dp"
@@ -14,21 +14,21 @@
   <TextView
       android:id="@+id/date"
       android:layout_width="match_parent"
-      android:layout_height="match_parent"
+      android:layout_height="wrap_content"
       android:gravity="center"
       android:textAppearance="?android:attr/textAppearanceLarge" />
 
   <TextView
       android:id="@+id/pollen"
       android:layout_width="match_parent"
-      android:layout_height="match_parent"
+      android:layout_height="wrap_content"
       android:gravity="center"
       android:textAppearance="?android:attr/textAppearanceLarge" />
 
   <TextView
       android:id="@+id/weather"
       android:layout_width="match_parent"
-      android:layout_height="match_parent"
+      android:layout_height="wrap_content"
       android:gravity="center"
       android:textAppearance="?android:attr/textAppearanceLarge" />
 

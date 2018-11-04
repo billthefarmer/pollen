@@ -23,12 +23,13 @@
 
 package org.billthefarmer.pollen;
 
-import android.app.Activity;
+import android.Manifest;
 import android.app.ActionBar;
+import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.BitmapDrawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -38,15 +39,24 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.provider.Settings;
 import android.util.Base64;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.DatePicker;
 import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.api.IMapController;
+import org.osmdroid.config.Configuration;
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.CopyrightOverlay;
+import org.osmdroid.views.overlay.Overlay;
+import org.osmdroid.views.overlay.ScaleBarOverlay;
+import org.osmdroid.views.overlay.mylocation.SimpleLocationOverlay;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -60,27 +70,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import org.osmdroid.api.IMapController;
-import org.osmdroid.api.IGeoPoint;
-import org.osmdroid.config.Configuration;
-import org.osmdroid.events.MapAdapter;
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
-import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.Overlay;
-import org.osmdroid.views.overlay.CopyrightOverlay;
-import org.osmdroid.views.overlay.mylocation.SimpleLocationOverlay;
-import org.osmdroid.views.overlay.ScaleBarOverlay;
-
-public class Map extends Activity
-{
+public class Map extends Activity {
     private final static String TAG = "Map";
 
-    private final static String DATE     = "date";
-    private final static String POINTS   = "points";
+    private final static String DATE = "date";
+    private final static String POINTS = "points";
     private final static String LOCATION = "location";
     private final static String METADATA = "metadata";
     private final static String FORECAST = "forecast";
@@ -88,23 +82,23 @@ public class Map extends Activity
     private final static String LONGITUDE = "longitude";
 
     private final static String POLLEN =
-        "aHR0cHM6Ly9zb2NpYWxwb2xsZW5jb3VudC5jby51ay9hcGkvcG9pbnRzLyUwNGQv" +
-        "JTAyZC8lMDJkP2xvY2F0aW9uPVslZiwlZl0mZGlzdGFuY2U9JWQmcGxhdGZvcm09" +
-        "bW9iaWxlJmhvdHNwb3RzPSVkJnVzZXI9JXMK";
+            "aHR0cHM6Ly9zb2NpYWxwb2xsZW5jb3VudC5jby51ay9hcGkvcG9pbnRzLyUwNGQv" +
+                    "JTAyZC8lMDJkP2xvY2F0aW9uPVslZiwlZl0mZGlzdGFuY2U9JWQmcGxhdGZvcm09" +
+                    "bW9iaWxlJmhvdHNwb3RzPSVkJnVzZXI9JXMK";
 
     public final static String FORMAT =
-        "yyyy-MM-dd'T'HH:mm:ss";
+            "yyyy-MM-dd'T'HH:mm:ss";
 
     private final static String DESCRIPTIONS[] =
-    {
-        "Low", "Moderate", "High", "Very High"
-    };
+            {
+                    "Low", "Moderate", "High", "Very High"
+            };
 
     private final static int IDS[] =
-    {
-        R.drawable.ic_low, R.drawable.ic_moderate,
-        R.drawable.ic_high, R.drawable.ic_very_high
-    }; 
+            {
+                    R.drawable.ic_low, R.drawable.ic_moderate,
+                    R.drawable.ic_high, R.drawable.ic_very_high
+            };
 
     public final static int DELAY = 5000;
     public final static int DISTANCE = 50000;
@@ -122,12 +116,11 @@ public class Map extends Activity
     // onCreate
     @Override
     @SuppressWarnings("deprecation")
-    public void onCreate(Bundle savedInstanceState)
-    {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         SharedPreferences preferences =
-            PreferenceManager.getDefaultSharedPreferences(this);
+                PreferenceManager.getDefaultSharedPreferences(this);
         boolean dark = preferences.getBoolean(Pollen.DARK, true);
 
         if (dark)
@@ -140,39 +133,38 @@ public class Map extends Activity
         if (actionBar != null)
             actionBar.setDisplayHomeAsUpEnabled(true);
 
-	// Set the user agent
+        // Set the user agent
         Configuration.getInstance()
-            .load(this, PreferenceManager.getDefaultSharedPreferences(this));
+                .load(this, PreferenceManager.getDefaultSharedPreferences(this));
 
-	// Get the text views
-        status = (TextView)findViewById(R.id.status);
-        when = (TextView)findViewById(R.id.when);
+        // Get the text views
+        status = findViewById(R.id.status);
+        when = findViewById(R.id.when);
 
-	// Get the map
-        map = (MapView)findViewById(R.id.map);
-	if (map != null)
-	{
-	    // Set up the map
-	    map.setTileSource(TileSourceFactory.MAPNIK);
-	    map.setBuiltInZoomControls(true);
-	    map.setMultiTouchControls(true);
+        // Get the map
+        map = findViewById(R.id.map);
+        if (map != null) {
+            // Set up the map
+            map.setTileSource(TileSourceFactory.MAPNIK);
+            map.setBuiltInZoomControls(true);
+            map.setMultiTouchControls(true);
 
-	    List<Overlay> overlayList = map.getOverlays();
+            List<Overlay> overlayList = map.getOverlays();
 
-	    // Add the overlays
-	    CopyrightOverlay copyright =
-		new CopyrightOverlay(this);
-	    overlayList.add(copyright);
-	    copyright.setAlignBottom(true);
-	    copyright.setAlignRight(false);
+            // Add the overlays
+            CopyrightOverlay copyright =
+                    new CopyrightOverlay(this);
+            overlayList.add(copyright);
+            copyright.setAlignBottom(true);
+            copyright.setAlignRight(false);
 
-	    ScaleBarOverlay scale = new ScaleBarOverlay(map);
-	    overlayList.add(scale);
-	    scale.setAlignBottom(true);
-	    scale.setAlignRight(true);
+            ScaleBarOverlay scale = new ScaleBarOverlay(map);
+            overlayList.add(scale);
+            scale.setAlignBottom(true);
+            scale.setAlignRight(true);
 
             simpleLocation =
-                new SimpleLocationOverlay(this);
+                    new SimpleLocationOverlay(this);
             overlayList.add(simpleLocation);
 
             icons = new IconListOverlay();
@@ -181,10 +173,9 @@ public class Map extends Activity
 
         // Acquire a reference to the system Location Manager
         locationManager = (LocationManager)
-            getSystemService(LOCATION_SERVICE);
+                getSystemService(LOCATION_SERVICE);
 
-        if (savedInstanceState != null)
-        {
+        if (savedInstanceState != null) {
             double lat = savedInstanceState.getDouble(LATITUDE);
             double lng = savedInstanceState.getDouble(LONGITUDE);
 
@@ -195,11 +186,23 @@ public class Map extends Activity
             last = location;
         }
 
-        if (location == null)
-        {
+        if (location == null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    Activity#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for Activity#requestPermissions for more details.
+                    return;
+                }
+            }
             location =
-                locationManager
-                .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    locationManager
+                            .getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
             if (location != null)
                 last = location;
@@ -208,14 +211,26 @@ public class Map extends Activity
 
     // On resume
     @Override
-    protected void onResume()
-    {
+    protected void onResume() {
         super.onResume();
 
         status.setText(R.string.locating);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    Activity#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for Activity#requestPermissions for more details.
+                return;
+            }
+        }
         location =
-	    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
         IMapController mapController = map.getController();
 
@@ -228,8 +243,7 @@ public class Map extends Activity
         // Centre map
         mapController.setCenter(point);
 
-	if (location != null)
-        {
+        if (location != null) {
             loadData(location);
             last = location;
 
@@ -241,44 +255,43 @@ public class Map extends Activity
         }
 
         locationManager
-            .requestSingleUpdate(LocationManager.GPS_PROVIDER,
-                                 new LocationListener()
-            {
-                // onLocationChanged
-                @Override
-                public void onLocationChanged(Location location)
-                {
-                    if (last == null || location.distanceTo(last) > DISTANCE)
-                    {
-                        loadData(location);
-                        last = location;
+                .requestSingleUpdate(LocationManager.GPS_PROVIDER,
+                        new LocationListener() {
+                            // onLocationChanged
+                            @Override
+                            public void onLocationChanged(Location location) {
+                                if (last == null || location.distanceTo(last) > DISTANCE) {
+                                    loadData(location);
+                                    last = location;
 
-                        IMapController mapController = map.getController();
+                                    IMapController mapController = map.getController();
 
-                        // Get point
-                        GeoPoint point = new GeoPoint(location);
+                                    // Get point
+                                    GeoPoint point = new GeoPoint(location);
 
-                        // Update location
-                        simpleLocation.setLocation(point);
-                    }
-                }
+                                    // Update location
+                                    simpleLocation.setLocation(point);
+                                }
+                            }
 
-                @Override
-                public void onStatusChanged(String provider,
-                                            int status, Bundle extras) {}
+                            @Override
+                            public void onStatusChanged(String provider,
+                                                        int status, Bundle extras) {
+                            }
 
-                @Override
-                public void onProviderEnabled(String provider) {}
+                            @Override
+                            public void onProviderEnabled(String provider) {
+                            }
 
-                @Override
-                public void onProviderDisabled(String provider) {}
-            }, null);
+                            @Override
+                            public void onProviderDisabled(String provider) {
+                            }
+                        }, null);
     }
 
     // onCreateOptionsMenu
     @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
+    public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.map, menu);
         return true;
@@ -286,12 +299,10 @@ public class Map extends Activity
 
     // onSaveInstanceState
     @Override
-    protected void onSaveInstanceState (Bundle outState)
-    {
+    protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        if (location != null)
-        {
+        if (location != null) {
             double lat = location.getLatitude();
             double lng = location.getLongitude();
 
@@ -302,89 +313,76 @@ public class Map extends Activity
 
     // onOptionsItemSelected
     @Override
-    public boolean onOptionsItemSelected(MenuItem item)
-    {
+    public boolean onOptionsItemSelected(MenuItem item) {
         // Get id
         int id = item.getItemId();
-        switch (id)
-        {
+        switch (id) {
             // Home
-        case android.R.id.home:
-            finish();
-            break;
+            case android.R.id.home:
+                finish();
+                break;
 
             // Date
-        case R.id.action_date:
-            onDateClick();
-            break;
+            case R.id.action_date:
+                onDateClick();
+                break;
 
-        default:
-            return false;
+            default:
+                return false;
         }
 
         return true;
     }
 
     // onDateClick
-    private void onDateClick()
-    {
+    private void onDateClick() {
         Calendar calendar = Calendar.getInstance();
         DatePickerDialog dialog = new
-            DatePickerDialog(this, new DatePickerDialog.OnDateSetListener()
-                {
-                    public void onDateSet (DatePicker view, 
-                                           int year, 
-                                           int month, 
-                                           int day)
-                    {
-                        // Check connectivity before update
-                        ConnectivityManager manager = (ConnectivityManager)
-                            getSystemService(CONNECTIVITY_SERVICE);
-                        NetworkInfo info = manager.getActiveNetworkInfo();
+                DatePickerDialog(this, (view, year, month, day) -> {
+            // Check connectivity before update
+            ConnectivityManager manager = (ConnectivityManager)
+                    getSystemService(CONNECTIVITY_SERVICE);
+            NetworkInfo info = manager.getActiveNetworkInfo();
 
-                        // Check connected
-                        if (info == null || !info.isConnected())
-                        {
-                            if (status != null)
-                                status.setText(R.string.no_connection);
+            // Check connected
+            if (info == null || !info.isConnected()) {
+                if (status != null)
+                    status.setText(R.string.no_connection);
 
-                            return;
-                        }
+                return;
+            }
 
-                        // Check location
-                        if (location == null)
-                            return;
+            // Check location
+            if (location == null)
+                return;
 
-                        double lat = location.getLatitude();
-                        double lng = location.getLongitude();
+            double lat = location.getLatitude();
+            double lng = location.getLongitude();
 
-                        String template = new
-                            String(Base64.decode(POLLEN, Base64.DEFAULT));
-                        String url = String.format(Locale.getDefault(),
-                                                   template,
-                                                   year, month + 1, day,
-                                                   lat, lng, 0, 0,
-                                                   Build.SERIAL);
+            String template = new
+                    String(Base64.decode(POLLEN, Base64.DEFAULT));
+            String url = String.format(Locale.getDefault(),
+                    template,
+                    year, month + 1, day,
+                    lat, lng, 0, 0,
+                    Build.SERIAL);
 
-                        LoadTask loadTask = new LoadTask();
-                        loadTask.execute(url);                    }
-                },
-                             calendar.get(Calendar.YEAR),
-                             calendar.get(Calendar.MONTH),
-                             calendar.get(Calendar.DATE));
+            LoadTask loadTask = new LoadTask();
+            loadTask.execute(url);
+        },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DATE));
         dialog.show();
     }
 
     // getDrawable
     @SuppressWarnings("deprecation")
-    private Drawable getDrawable(String string)
-    {
+    private Drawable getDrawable(String string) {
         int j = 0;
         int id = -1;
-        for (String description: DESCRIPTIONS)
-        {
-            if (string.equals(description))
-            {
+        for (String description : DESCRIPTIONS) {
+            if (string.equals(description)) {
                 id = IDS[j];
                 break;
             }
@@ -396,18 +394,16 @@ public class Map extends Activity
     }
 
     // loadData
-    private void loadData(Location location)
-    {
+    private void loadData(Location location) {
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
 
         // Check connectivity before update
         ConnectivityManager manager = (ConnectivityManager)
-            getSystemService(CONNECTIVITY_SERVICE);
+                getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo info = manager.getActiveNetworkInfo();
 
         // Check connected
-        if (info == null || !info.isConnected())
-        {
+        if (info == null || !info.isConnected()) {
             if (status != null)
                 status.setText(R.string.no_connection);
 
@@ -416,16 +412,14 @@ public class Map extends Activity
 
             if (millis < 0 || pointString == null)
                 return;
- 
-            try
-            {
-                JSONArray points = new JSONArray(pointString);
- 
-                List<IGeoPoint> pointList = new ArrayList<IGeoPoint>();
-                List<Drawable> iconList = new ArrayList<Drawable>();
 
-                for (int i = 0; i < points.length(); i++)
-                {
+            try {
+                JSONArray points = new JSONArray(pointString);
+
+                List<IGeoPoint> pointList = new ArrayList<>();
+                List<Drawable> iconList = new ArrayList<>();
+
+                for (int i = 0; i < points.length(); i++) {
                     JSONObject point = points.getJSONObject(i);
                     JSONArray loc = point.getJSONArray(LOCATION);
 
@@ -446,15 +440,14 @@ public class Map extends Activity
                 map.invalidate();
 
                 DateFormat format =
-                    DateFormat.getDateInstance(DateFormat.FULL);
+                        DateFormat.getDateInstance(DateFormat.FULL);
                 Date date = new Date(millis);
                 String string = format.format(date);
                 String updated = getString(R.string.updated);
                 String text = String.format(updated, string);
                 status.setText(text);
-           }
-
-            catch (Exception e) {}
+            } catch (Exception ignored) {
+            }
 
             return;
         }
@@ -469,75 +462,61 @@ public class Map extends Activity
 
         String template = new String(Base64.decode(POLLEN, Base64.DEFAULT));
         String url = String.format(Locale.getDefault(), template,
-                                   year, month + 1, day, lat, lng, 0, 0,
-                                   Build.SERIAL);
+                year, month + 1, day, lat, lng, 0, 0,
+                Build.SERIAL);
 
         LoadTask loadTask = new LoadTask();
         loadTask.execute(url);
     }
 
     // LoadTask
-    private class LoadTask extends AsyncTask<String, Integer, String>
-    {
+    private class LoadTask extends AsyncTask<String, Integer, String> {
         // doInBackground
         @Override
-        protected String doInBackground(String... urls)
-        {
-            try
-            {
+        protected String doInBackground(String... urls) {
+            try {
                 URL url = new URL(urls[0]);
-                InputStream input = url.openStream();
 
-                try
-                {
+                try (InputStream input = url.openStream()) {
                     BufferedReader bufferedReader =
-                        new BufferedReader(new InputStreamReader(input));
+                            new BufferedReader(new InputStreamReader(input));
                     StringBuilder content =
-                        new StringBuilder(input.available());
+                            new StringBuilder(input.available());
                     String line;
-                    while ((line = bufferedReader.readLine()) != null)
-                    {
+                    while ((line = bufferedReader.readLine()) != null) {
                         content.append(line);
                         content.append(System.getProperty("line.separator"));
                     }
 
                     return content.toString();
                 }
-
-                finally
-                {
-                    input.close();
-                }
+            } catch (Exception ignored) {
             }
-
-            catch (Exception e) {}
 
             return null;
         }
 
         // onProgressUpdate
         @Override
-        protected void onProgressUpdate(Integer... progress) {}
+        protected void onProgressUpdate(Integer... progress) {
+        }
 
         // onPostExecute
         @Override
-        protected void onPostExecute(String result)
-        {
-            try
-            {
+        protected void onPostExecute(String result) {
+            try {
                 JSONObject json = new JSONObject(result);
                 String dateString = json.getString(DATE);
                 JSONArray points = json.getJSONArray(POINTS);
 
                 DateFormat parseFormat =
-                    new SimpleDateFormat(FORMAT, Locale.getDefault());
+                        new SimpleDateFormat(FORMAT, Locale.getDefault());
                 Date date = parseFormat.parse(dateString);
 
-                List<IGeoPoint> pointList = new ArrayList<IGeoPoint>();
-                List<Drawable> iconList = new ArrayList<Drawable>();
+                List<IGeoPoint> pointList = new ArrayList<>();
+                List<Drawable> iconList = new ArrayList<>();
 
-                for (int i = 0; i < points.length(); i++)
-                {
+                for (int i = 0; i < points.length(); i++) {
                     JSONObject point = points.getJSONObject(i);
                     JSONArray location = point.getJSONArray(LOCATION);
 
@@ -564,14 +543,13 @@ public class Map extends Activity
                 editor.apply();
 
                 DateFormat format =
-                    DateFormat.getDateInstance(DateFormat.FULL);
+                        DateFormat.getDateInstance(DateFormat.FULL);
                 String string = format.format(date);
                 String updated = getString(R.string.updated);
                 String text = String.format(updated, string);
                 status.setText(text);
 
-                if (!pointList.isEmpty())
-                {
+                if (!pointList.isEmpty()) {
                     JSONObject point = points.getJSONObject(0);
                     JSONObject metadata = point.getJSONObject(METADATA);
                     dateString = metadata.getString(DATE);
@@ -579,13 +557,10 @@ public class Map extends Activity
                     date = parseFormat.parse(dateString);
                     text = format.format(date);
                     when.setText(text);
-                }
-
-                else
+                } else
                     when.setText(R.string.no_data);
+            } catch (Exception ignored) {
             }
-
-            catch (Exception e) {}
         }
     }
 }

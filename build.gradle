@@ -25,13 +25,13 @@ android {
     defaultConfig {
         applicationId "org.billthefarmer.pollen"
         minSdkVersion 14
-        targetSdkVersion 28
+        targetSdkVersion 22
         versionCode 1
         versionName "1.0"
     }
 
     lintOptions {
-        disable 'IconDensities'
+        disable 'IconDensities', 'ExpiredTargetSdkVersion'
         // abortOnError false
     }
 

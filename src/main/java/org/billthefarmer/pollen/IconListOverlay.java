@@ -36,10 +36,11 @@ import org.osmdroid.views.overlay.Overlay;
 import java.util.List;
 
 // IconListOverlay
-public class IconListOverlay extends Overlay {
+public class IconListOverlay extends Overlay
+{
     // Usual values in the (U,V) coordinates system of the icon image
     public static final float ANCHOR_CENTER = 0.5f, ANCHOR_LEFT = 0.0f,
-            ANCHOR_TOP = 0.0f, ANCHOR_RIGHT = 1.0f, ANCHOR_BOTTOM = 1.0f;
+                              ANCHOR_TOP = 0.0f, ANCHOR_RIGHT = 1.0f, ANCHOR_BOTTOM = 1.0f;
 
     protected List<Drawable> iconList;
     protected List<IGeoPoint> positionList;
@@ -53,18 +54,21 @@ public class IconListOverlay extends Overlay {
     protected Point point = new Point();
 
     // IconListOverlay
-    public IconListOverlay() {
+    public IconListOverlay()
+    {
     }
 
     // IconListOverlay
     public IconListOverlay(List<IGeoPoint> positionList,
-                           List<Drawable> iconList) {
+                           List<Drawable> iconList)
+    {
         set(positionList, iconList);
     }
 
     // Draw the icons.
     @Override
-    public void draw(Canvas canvas, MapView mapView, boolean shadow) {
+    public void draw(Canvas canvas, MapView mapView, boolean shadow)
+    {
         if (shadow)
             return;
         if (iconList == null)
@@ -75,7 +79,8 @@ public class IconListOverlay extends Overlay {
         final Projection pj = mapView.getProjection();
 
         int i = 0;
-        for (IGeoPoint pos : positionList) {
+        for (IGeoPoint pos : positionList)
+        {
             Drawable icon = iconList.get(i++);
 
             pj.toPixels(pos, point);
@@ -88,19 +93,21 @@ public class IconListOverlay extends Overlay {
             icon.setAlpha((int) (alpha * 255));
 
             float rotationOnScreen = (flat ? -bearing :
-                    mapView.getMapOrientation() - bearing);
+                                      mapView.getMapOrientation() - bearing);
             drawAt(canvas, icon, point.x, point.y, false, rotationOnScreen);
         }
     }
 
     // getPositionList
-    public List<IGeoPoint> getPositionList() {
+    public List<IGeoPoint> getPositionList()
+    {
         return positionList;
     }
 
     // set
     public IconListOverlay set(List<IGeoPoint> positionList,
-                               List<Drawable> iconList) {
+                               List<Drawable> iconList)
+    {
         this.positionList = positionList;
         this.iconList = iconList;
 

@@ -86,7 +86,8 @@ public class Pollen extends Activity
     public final static int DELAY = 5000;
     public final static int DISTANCE = 50000;
 
-    private final static int VERSION_M = 23;
+    private final static int REQUEST_CREATE = 1;
+    private final static int REQUEST_RESUME = 2;
 
     private Location last = null;
     private Location location = null;
@@ -133,29 +134,59 @@ public class Pollen extends Activity
             last = location;
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED)
+            {
+                requestPermissions(new String[]
+                    {Manifest.permission.ACCESS_FINE_LOCATION},
+                                   REQUEST_CREATE);
+                return;
+            }
+        }
+
         if (location == null)
         {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            {
-                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED)
-                {
-                    // TODO: Consider calling
-                    //    Activity#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for Activity#requestPermissions for more details.
-                    return;
-                }
-            }
-            location =
-                locationManager
+            location = locationManager
                 .getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
             if (location != null)
                 last = location;
+        }
+    }
+
+    // onRequestPermissionsResult
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String[] permissions,
+                                           int[] grantResults)
+    {
+        switch (requestCode)
+        {
+        case REQUEST_CREATE:
+            for (int i = 0; i < grantResults.length; i++)
+                if (permissions[i].equals(Manifest.permission
+                                          .ACCESS_FINE_LOCATION) &&
+                    grantResults[i] == PackageManager.PERMISSION_GRANTED)
+                    // Granted
+                    if (location == null)
+                    {
+                        location = locationManager
+                            .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                        if (location != null)
+                            last = location;
+                    }
+            break;
+
+        case REQUEST_RESUME:
+            for (int i = 0; i < grantResults.length; i++)
+                if (permissions[i].equals(Manifest.permission
+                                          .ACCESS_FINE_LOCATION) &&
+                    grantResults[i] == PackageManager.PERMISSION_GRANTED)
+                    // Granted
+                    doResume();
         }
     }
 
@@ -172,16 +203,20 @@ public class Pollen extends Activity
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED)
             {
-                // TODO: Consider calling
-                //    Activity#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for Activity#requestPermissions for more details.
+
+                requestPermissions(new String[]
+                    {Manifest.permission.ACCESS_FINE_LOCATION},
+                                   REQUEST_RESUME);
                 return;
             }
         }
+
+        doResume();
+    }
+
+    // doResume
+    private void doResume()
+    {
         location =
             locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
@@ -191,24 +226,9 @@ public class Pollen extends Activity
             last = location;
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED)
-            {
-                // TODO: Consider calling
-                //    Activity#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for Activity#requestPermissions for more details.
-                return;
-            }
-        }
         locationManager
-        .requestSingleUpdate(LocationManager.GPS_PROVIDER,
-                             new LocationListener()
+            .requestSingleUpdate(LocationManager.GPS_PROVIDER,
+                                 new LocationListener()
         {
             // onLocationChanged
             @Override
@@ -323,7 +343,7 @@ public class Pollen extends Activity
         dark = !dark;
         item.setChecked(dark);
 
-        if (Build.VERSION.SDK_INT != VERSION_M)
+        if (Build.VERSION.SDK_INT != Build.VERSION_CODES.M)
             recreate();
     }
 
